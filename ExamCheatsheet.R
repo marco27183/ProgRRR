@@ -1,0 +1,194 @@
+# Exam cheatsheet
+
+## create list of letters (e.g. 5 first letters of alphabet):
+n = 10
+LETTERS[1:n]
+
+## change names of list/atomic vector:
+v <- 1:5
+names(v) <- c("Hans", "Heiri")
+names(v) # creates NA_character for missing names (typeof(names(v)[3]) returns "character")
+v
+is.na(names(v)) # check for each element if NA and returns boolean vector
+
+## Whats the outer-most function that is called here?
+# 1.
+names(v) <- LETTERS[1:5]
+### It is the asignement function `names<-`
+`names<-` #identical to get("names<-"): identical(`names<-`, get("names<-"))
+
+# 1.
+names(v)
+### It is the names function `names`
+`names` #identical to get("names"): identical(`names`, get("names"))
+
+# 1.
+v
+### It is the print function `print`
+`print` #identical to get("print"): identical(`print`, get("print"))
+
+
+## How to find all packages in current session?
+search() # List is in same order as searchpaths() (meaning first is .GlobalEnv and last is package:base)
+searchpaths()
+
+## How to list all available objects in current environment?
+ls() # objects and ls are identical
+ls(2) # lists all objects in the second environment in search path
+### it lists all functions, variables and datasets
+
+## if we want to get overview of all R objects in search path, we cal ls() on each search() entry:
+ls.srch <- sapply(grep("package:", search(), value=TRUE), ls, all.names=TRUE) # only in packages, all.names makes sure we also get hidden objects
+### Quick note: sapply(x, f, simplify = FALSE, USE.NAMES = FALSE) is the same as lapply(x, f).
+
+## if we want to get overview of all R functions in search path, we cal ls() on each search() entry:
+fn.srch <- sapply(ls.srch, function(nm) {nm[sapply(lapply(nm, get), is.function)]})
+
+### get overview table
+res <- rbind(cbind(ls = (N1 <- sapply(ls.srch, length)), funs = (N2 <- sapply(fn.srch, length))), TOTAL = c(sum(N1), sum(N2)))
+
+## Find a function in all packages/locations
+`[<-` <- function(){}
+find("[<-") # in two places
+get("[<-", 1) # close to below 
+get("[<-", "package:base")
+rm("[<-") # to remove self-created function from gloabl-env (could also use rm("[<-", pos = ".GlobalEnv"))
+
+
+## Get or set body of functions
+body(lm)
+
+## Get or set formals
+formals(lm)
+### Get names of formals
+names(formals(lm)) ## Empty if no default value
+str(formals(lm)) # Is not a regular list, but "Dotted pair list"
+
+## Every non-primitive function has three parts: formals, body and environment
+
+
+# Environments
+## Environments can contain themselves, elements in environment are not ordered (cannot say first object of environment)
+## ls(env) sorts all elements in environment, while names(env) does not do that
+ls.str(env) # does not return something but prints the structure of environment
+## Create environment
+e.1 <- new.env()
+e.1$a <- 1:3
+e.1$b <- 1000
+
+e.2 <- e.1
+
+## expression/quote: keep syntax as text and only evaluate once eval is called
+eval(expression(a+b), envir = e.1)
+eval(quote(a+b), envir = e.2)
+s <- function() a+b
+s() # error
+eval(quote(s()), envir=e.1) # error since environment(s) is not e.1 but .GlobalEnv
+
+### Change environment of function
+environment(s) <- e.1
+s() # works
+
+## Find all definitions of function:
+methods("+")
+
+## Information about session
+sessionInfo() # see all information about current session
+
+
+# Sink: Send all console output to file
+sink("testFile.R") # start sinking to file
+getAnywhere("quantile.default")
+sink() # finish sinking to file
+
+### Same functionality: dump("quantile.default", file="testFile.R", envir = asNamespace())
+
+# See envex2.R!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+## Assign name to environment
+attr(e.1, "name") <- "Cool name"
+environmentName(e.1)
+
+## get object from environment
+get("a", envir = e.1)
+get("d", envir=e.1) # works because default is inherits=TRUE (d is in global env)
+get("d", envir = e.1, inherits=FALSE) # cannot find object in e.1
+
+## assign object to environment
+assign("myTestLogic", c(TRUE, FALSE), envir = e.1)
+ls(e.1)
+
+### package:<packageName> only shows functions that are exported, the namespace:<packageName> contains more!
+### The environment of all functions in package:<packageName> is the namespace:<packageName>
+### Parent environment of namespace is import:<packageName>
+
+
+# Check the paths where packages were installed
+.libPaths()
+.Library
+library(lib.loc=.Library)
+
+library(proftools)
+# get description of package
+packageDescription("proftools")
+## Exploring package _manually_: The ./doc/ sub-directory has vignettes
+(doc.dir <- system.file(package = "proftools", "doc"))
+list.files(doc.dir)
+
+### Open vignette:
+"./proftools-vignette.R"
+
+### Show pdf of doc:
+shell(file.path(doc.dir, "proftools.pdf"))
+
+# Optimize code
+library(microbenchmark)
+mean1 <- function(x) mean(x)
+mean2 <- function(x) sum(x) / length(x)
+x <- runif(100)
+stopifnot(all.equal(mean1(x), mean2(x)))
+timings.mean <- microbenchmark(
+  mean1(x),
+  mean2(x)
+)
+
+## Get table of timings
+summary(timings.mean)
+
+## How to get the median:
+summary(timings.mean)$median
+
+
+
+
+# Helpful commands:
+## http://adv-r.had.co.nz/Vocabulary.html#undefined
+## Script: https://stat.ethz.ch/CRAN/doc/contrib/Lam-IntroductionToR_LHL.pdf
+
+## Is element in array?
+any(1:20 == 10) # or 10 %in% 1:20 which is much slower
+
+## Cut numeric array into x pieces
+pcs <- 3
+cut(1:40, pcs) # labels=FALSE would recode them as integers
+
+## Get class of object
+data.class(timings.mean)
+
+## find methods of class
+methods(class="lm")
+
+## Find which classes have implementation of method
+methods(generic.function="extractAIC")
+
+## Assign class to object
+testArray <- 1:20^4
+class(testArray) <- c("LargeArray")
+
+## Substitute, quote, deparse
+x <- runif(1e4)
+microbenchmark(mean(x), mean.default(x))
+
+## Apply vs. rowSums:
+microbenchmark(apply(as.matrix(x), 1, sum), rowSums(as.matrix(x)))
