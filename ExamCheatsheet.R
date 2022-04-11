@@ -1,5 +1,12 @@
 # Exam cheatsheet
 
+
+
+########################################################################################################################
+
+
+## Helpful functions for lists
+
 ## create list of letters (e.g. 5 first letters of alphabet):
 n = 10
 LETTERS[1:n]
@@ -28,31 +35,6 @@ v
 `print` #identical to get("print"): identical(`print`, get("print"))
 
 
-## How to find all packages in current session?
-search() # List is in same order as searchpaths() (meaning first is .GlobalEnv and last is package:base)
-searchpaths()
-
-## How to list all available objects in current environment?
-ls() # objects and ls are identical
-ls(2) # lists all objects in the second environment in search path
-### it lists all functions, variables and datasets
-
-## if we want to get overview of all R objects in search path, we cal ls() on each search() entry:
-ls.srch <- sapply(grep("package:", search(), value=TRUE), ls, all.names=TRUE) # only in packages, all.names makes sure we also get hidden objects
-### Quick note: sapply(x, f, simplify = FALSE, USE.NAMES = FALSE) is the same as lapply(x, f).
-
-## if we want to get overview of all R functions in search path, we cal ls() on each search() entry:
-fn.srch <- sapply(ls.srch, function(nm) {nm[sapply(lapply(nm, get), is.function)]})
-
-### get overview table
-res <- rbind(cbind(ls = (N1 <- sapply(ls.srch, length)), funs = (N2 <- sapply(fn.srch, length))), TOTAL = c(sum(N1), sum(N2)))
-
-## Find a function in all packages/locations
-`[<-` <- function(){}
-find("[<-") # in two places
-get("[<-", 1) # close to below 
-get("[<-", "package:base")
-rm("[<-") # to remove self-created function from gloabl-env (could also use rm("[<-", pos = ".GlobalEnv"))
 
 
 ## Get or set body of functions
@@ -67,11 +49,24 @@ str(formals(lm)) # Is not a regular list, but "Dotted pair list"
 ## Every non-primitive function has three parts: formals, body and environment
 
 
+
+########################################################################################################################
+
+
+
 # Environments
 ## Environments can contain themselves, elements in environment are not ordered (cannot say first object of environment)
 ## ls(env) sorts all elements in environment, while names(env) does not do that
 ls.str(env) # does not return something but prints the structure of environment
 ## To list everything, including the functions/variables that start with ".", use all.names=TRUE
+
+## Get loaded namespaces:
+loadedNamespaces()
+## Load namespace
+loadNamespace()
+
+## Get function in all environments:
+getAnywhere(mean)
 
 ## Create environment
 e.1 <- new.env()
@@ -102,6 +97,32 @@ parent.env(asNamespace("stats"))
 
 ## Get list of all packages
 library()$results[,1]
+
+## How to find all packages in current session?
+search() # List is in same order as searchpaths() (meaning first is .GlobalEnv and last is package:base)
+searchpaths()
+
+## How to list all available objects in current environment?
+ls() # objects and ls are identical
+ls(2) # lists all objects in the second environment in search path
+### it lists all functions, variables and datasets
+
+## if we want to get overview of all R objects in search path, we cal ls() on each search() entry:
+ls.srch <- sapply(grep("package:", search(), value=TRUE), ls, all.names=TRUE) # only in packages, all.names makes sure we also get hidden objects
+### Quick note: sapply(x, f, simplify = FALSE, USE.NAMES = FALSE) is the same as lapply(x, f).
+
+## if we want to get overview of all R functions in search path, we cal ls() on each search() entry:
+fn.srch <- sapply(ls.srch, function(nm) {nm[sapply(lapply(nm, get), is.function)]})
+
+### get overview table
+res <- rbind(cbind(ls = (N1 <- sapply(ls.srch, length)), funs = (N2 <- sapply(fn.srch, length))), TOTAL = c(sum(N1), sum(N2)))
+
+## Find a function in all packages/locations
+`[<-` <- function(){}
+find("[<-") # in two places
+get("[<-", 1) # close to below 
+get("[<-", "package:base")
+rm("[<-") # to remove self-created function from gloabl-env (could also use rm("[<-", pos = ".GlobalEnv"))
 
 ## Find all definitions of function:
 methods("+")
@@ -151,12 +172,92 @@ ls(e.1)
 .Library
 library(lib.loc=.Library)
 
+
+
+########################################################################################################################
+
+
+## Profiling and documentation of package/vignette
+
 library(proftools)
 # get description of package
 packageDescription("proftools")
 ## Exploring package _manually_: The ./doc/ sub-directory has vignettes
 (doc.dir <- system.file(package = "proftools", "doc"))
 list.files(doc.dir)
+
+## Profiling a function/script
+srcfile <- system.file("samples", "bootlmEx.R", package = "proftools")
+srcfile
+profout <- tempfile()
+Rprof(file = profout, gc.profiling = TRUE, line.profiling = TRUE)
+source(srcfile)
+Rprof(NULL)
+summaryRprof(profout, lines = "show")
+pd <- readProfileData(profout)
+unlink(profout)
+
+pd <- profileExpr(source(srcfile))
+
+## ------------------------------------------------------------------------
+head(funSummary(pd), 10)
+
+## ------------------------------------------------------------------------
+head(funSummary(pd, srclines = FALSE), 10)
+
+## ------------------------------------------------------------------------
+head(callSummary(pd), 10)
+
+## ------------------------------------------------------------------------
+srcSummary(pd)
+
+## ------------------------------------------------------------------------
+hotPaths(pd, total.pct = 10.0)
+
+## ------------------------------------------------------------------------
+filteredPD <- filterProfileData(pd, select = "withVisible", skip = 4)
+f.......PD <- filterProfileData(pd,                         skip = 4)
+all.equal(filteredPD, f.......PD) # |-> TRUE  #--> select =".." here unneeded
+## ------------------------------------------------------------------------
+hotPaths(filteredPD, total.pct = 10.0)
+
+## ------------------------------------------------------------------------
+glmPD <- filterProfileData(filteredPD, focus = "glm")
+hotPaths(glmPD, total.pct = 5.0)
+
+## ----fullCallGraph, fig.cap = "Full call graph of profile data."---------
+plotProfileCallGraph(pd)
+
+## pdf version:
+pdf("plotProfCallGraph.pdf")
+plotProfileCallGraph(pd)
+dev.off()
+system("evince plotProfCallGraph.pdf &") # <-- on Linux; use "open" on Mac
+
+## ----filteredCallGraph, fig.cap = "Call graph for \\code{glm.fit} call."----
+plotProfileCallGraph(filterProfileData(pd, focus = "glm.fit"))
+
+## ----printProfileCallGraph, eval=FALSE-----------------------------------
+#  printProfileCallGraph(filterProfileData(pd, focus = "glm.fit"))
+
+## ----echo = FALSE, comment = NA------------------------------------------
+printProfileCallGraph(filterProfileData(pd, focus = "glm.fit"))
+
+## ----flameGraph, out.width = "4in", fig.cap = "Flame graph visualizing hot paths for the full profile data."----
+flameGraph(pd)
+
+## ----filteredFlameGraph, out.width = "4in", fig.cap = "Flame graph of the filtered profile data."----
+flameGraph(filteredPD)
+
+## ----timeGraph, out.width = "4in", fig.cap = "Time graph of the full profile data."----
+flameGraph(pd, order = "time")
+
+## ----eval = FALSE--------------------------------------------------------
+#  fg <- flameGraph(pd)
+#  identify(fg)
+
+## ----calleeTreeMap, out.width = "4in", fig.cap = "Call tree map of the full profile data."----
+calleeTreeMap(pd)
 
 ### Open vignette:
 "./proftools-vignette.R"
@@ -184,7 +285,12 @@ summary(timings.mean)$median
 
 
 
+########################################################################################################################
+
+
 # Helpful commands:
+
+
 ## http://adv-r.had.co.nz/Vocabulary.html#undefined
 ## Script: https://stat.ethz.ch/CRAN/doc/contrib/Lam-IntroductionToR_LHL.pdf
 
@@ -300,4 +406,6 @@ as.list ##-> UseMethod ===> it is a S3 generic function
 
 ##
 match.call() # the function *call* (an object of class & type  "call")
+
+
 
