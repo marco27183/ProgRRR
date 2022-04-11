@@ -71,6 +71,8 @@ str(formals(lm)) # Is not a regular list, but "Dotted pair list"
 ## Environments can contain themselves, elements in environment are not ordered (cannot say first object of environment)
 ## ls(env) sorts all elements in environment, while names(env) does not do that
 ls.str(env) # does not return something but prints the structure of environment
+## To list everything, including the functions/variables that start with ".", use all.names=TRUE
+
 ## Create environment
 e.1 <- new.env()
 e.1$a <- 1:3
@@ -89,12 +91,32 @@ eval(quote(s()), envir=e.1) # error since environment(s) is not e.1 but .GlobalE
 environment(s) <- e.1
 s() # works
 
+## get specific namespace
+asNamespace("stats")
+
+## Get import:<package> environment
+parent.env(asNamespace("stats"))
+
+## Get all currently loaded packages
+(.packages())
+
+## Get list of all packages
+library()$results[,1]
+
 ## Find all definitions of function:
 methods("+")
 
 ## Information about session
 sessionInfo() # see all information about current session
 
+## Check if function is S3 generic
+isS3stdGeneric(coef) # isS3stdGeneric(get("coef"))
+
+### Check if function is S3 method
+isS3method("coef") # isS3method(deparse(substitute(coef)))
+
+## Get all objects and functions in environments including their content/values:
+as.list(environment())
 
 # Sink: Send all console output to file
 sink("testFile.R") # start sinking to file
@@ -169,6 +191,16 @@ summary(timings.mean)$median
 ## Is element in array?
 any(1:20 == 10) # or 10 %in% 1:20 which is much slower
 
+## Check if argument was provided in function call
+missing(x)
+
+## Check if variable exists in environment including full search path
+exists("a")
+
+## Find out where function/variable exists (which environment)
+library(pryr)
+where("a")
+
 ## Cut numeric array into x pieces
 pcs <- 3
 cut(1:40, pcs) # labels=FALSE would recode them as integers
@@ -186,9 +218,86 @@ methods(generic.function="extractAIC")
 testArray <- 1:20^4
 class(testArray) <- c("LargeArray")
 
+## Find variables that are not defined in function but must be 
+## found outside (lists all the external dependencies of a function)
+f <- function() x + 1
+codetools::findGlobals(f)
+
+## Send list of arguments to function:
+args <- list(1:10, na.rm = TRUE)
+do.call(mean, args)
+identical(do.call(mean, args), mean(1:10, na.rm = TRUE))
+
+## Define default arguments as variable from code:
+h <- function(a = 1, b = d) {
+  d <- (a + 1) ^ 2
+  c(a, b)
+}
+
 ## Substitute, quote, deparse
 x <- runif(1e4)
 microbenchmark(mean(x), mean.default(x))
 
 ## Apply vs. rowSums:
 microbenchmark(apply(as.matrix(x), 1, sum), rowSums(as.matrix(x)))
+
+
+# Which function is called for glm?
+(ml <- methods(class = "lm"))
+(mg <- methods(class = "glm"))
+str(ml)
+
+(ig <- attr(mg,"info"))
+(il <- attr(ml,"info"))
+
+str(n.l <- il[,"generic"])
+str(n.g <- ig[,"generic"])
+
+setdiff(n.l, n.g) # for these, <method>.lm is called, even if glm is used
+
+
+## Functions testing my knowledge
+y <- 10
+z <- 20
+f1 <- function() {
+  q <- 100
+  assign("y", y+1, envir=.GlobalEnv)
+  z <<- z + 10 # equivalent to above
+  f2 <- function() assign(y, y+1, pos = .GlobalEnv)
+  f3 <- function() print(q <- q+10)
+  environment(f3) <- environment()
+  f4 <- function() print(z <- z + 10)
+  environment(f4) <- parent.env(environment())
+  f3()
+  print(q)
+  }
+f1()
+f1()
+(y)
+(z)
+
+
+l <- function(x) x + 1
+m <- function() {
+  l <- function(x) x * 2
+  print(l(10))
+  get("l", pos=globalenv())(10) # get "outer" function l
+}
+m()
+
+
+f1 <- function(x = {y <- 1;2}, y=0) x+y
+
+## Dont show anything after function returns
+### Function can be applied to list or environment
+modify <- function(x) {
+  x$a <- 2
+  invisible()
+}
+
+## as.list is generic has many methods:
+as.list ##-> UseMethod ===> it is a S3 generic function
+
+##
+match.call() # the function *call* (an object of class & type  "call")
+
