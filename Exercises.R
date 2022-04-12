@@ -396,6 +396,21 @@ lines(rownames(results),
       col="blue")
 
 
+## Create timing for different apply functions on vector
+
+applyList <- list(
+  sapply = function(x, f) sapply(x, f),
+  lapply = function(x, f) lapply(x, f),
+  vapply = function(x, f) vapply(x, f, FUN.VALUE = numeric(1))
+)
+
+n <- c("10k"=1e4, "20k"=2e4, "40k"=4e4)
+
+### For one specific function (lapply)
+sapply(n, function(n) system.time(lapply(runif(n), mean))[1:3])
+
+### For all functions in list
+t(sapply(applyList, function(f) sapply(n, function(n) system.time(f(runif(n), mean))[1])))
 
 
 
