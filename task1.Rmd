@@ -1,0 +1,22 @@
+---
+title: Programming with R for Reproducible Research
+author: "Marco Känzig"
+date: "April 2022"
+output:
+  html_document:
+    keep_md: true
+---
+Task 1
+========================================================
+```{r, setup}
+rm(list=ls()); sessionInfo()
+```
+This R Markdown document is an outline to be used for the test of
+_Programming with R for Reproducible Research_. Markdown is a simple formatting syntax for authoring web pages (click the **Help** toolbar button for more ..).
+__do__ keep the first R chunk above which should ensure some reproducibility.
+
+Do ensure that clicking the **Knit HTML** button in Rstudio works in creating a web page including both content as well as the output of the embedded R code chunks. Notably you need to have installed the `knitr` R package (before the test, please). You can embed an R code chunk like this:
+
+```{r}
+print(pi, digits=15)
+```

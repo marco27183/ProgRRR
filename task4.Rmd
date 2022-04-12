@@ -1,0 +1,34 @@
+---
+title: Programming with R for Reproducible Research
+author: "Marco Känzig"
+date: "April 2022"
+output:
+  html_document:
+    keep_md: true
+---
+Task 4
+========================================================
+```{r, setup}
+rm(list=ls()); sessionInfo()
+```
+
+Start here, and do not change the above:
+
+
+```{r, def_allargs}
+## you  __MUST__  edit / change the ".." here :
+
+##' @param E is an environment, *either* of a package *or* of a namespace,
+##           used below in get(..) and  ls(..)
+allArgs <- function(E) {
+    nms <- Filter(function(n) is.function(get(n, E)), ls(E, all.names=TRUE)) ## Filter all functions
+    sapply(nms, function(n) names(formals(get(n, E)))) ## Get all names of formals of functions
+    ##                                ^^^ ^^^^^^   to be changed !!!
+}
+
+### Own ideas to test function
+allArgumentsStatsNs <- allArgs(asNamespace("stats"))
+allArgumentsStatsPkg <- allArgs(as.environment("package:stats"))
+str(allArgumentsStatsNs)
+str(allArgumentsStatsPkg)
+```

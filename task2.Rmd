@@ -1,0 +1,19 @@
+---
+title: Programming with R for Reproducible Research
+author: "Marco Känzig"
+date: "April 2022"
+output:
+  html_document:
+    keep_md: true
+---
+Task 2
+========================================================
+```{r, setup}
+rm(list=ls()); sessionInfo()
+```
+
+Start here, and do not change the above:
+
+```{r}
+1:2
+```

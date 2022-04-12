@@ -89,6 +89,9 @@ s() # works
 ## get specific namespace
 asNamespace("stats")
 
+## Get package environment (package:<name>)
+as.environment("package:stats")
+
 ## Get import:<package> environment
 parent.env(asNamespace("stats"))
 
@@ -102,10 +105,24 @@ library()$results[,1]
 search() # List is in same order as searchpaths() (meaning first is .GlobalEnv and last is package:base)
 searchpaths()
 
+## List conflicts
+conflicts()
+
 ## How to list all available objects in current environment?
 ls() # objects and ls are identical
 ls(2) # lists all objects in the second environment in search path
 ### it lists all functions, variables and datasets
+
+## Count all objects and functions in current R session from all packages
+ls.srch <- sapply(grep("package:", search(),
+                       value=TRUE), # "package:<name>" entries
+                  ls, all.names = TRUE)
+fn.srch <- sapply(ls.srch, function(nm) {
+  nm[ sapply(lapply(nm, get), is.function) ] })
+rbind(cbind(ls   = (N1 <- sapply(ls.srch, length)),
+            funs = (N2 <- sapply(fn.srch, length))),
+      TOTAL = c(sum(N1), sum(N2))) -> res
+
 
 ## if we want to get overview of all R objects in search path, we cal ls() on each search() entry:
 ls.srch <- sapply(grep("package:", search(), value=TRUE), ls, all.names=TRUE) # only in packages, all.names makes sure we also get hidden objects
@@ -146,8 +163,6 @@ sink() # finish sinking to file
 
 ### Same functionality: dump("quantile.default", file="testFile.R", envir = asNamespace())
 
-# See envex2.R!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
 
 ## Assign name to environment
 attr(e.1, "name") <- "Cool name"
@@ -171,6 +186,47 @@ ls(e.1)
 .libPaths()
 .Library
 library(lib.loc=.Library)
+
+
+
+########################################################################################################################
+
+
+## Regular expressions
+
+string <- c("Hiphopopotamus", "Rhymenoceros", "time for bottomless lyrics")
+pattern <- "t.m"
+
+## standard stuff
+grep(pattern, string) # 1 3
+grep(pattern, string, value = TRUE) # # [1] "Hiphopopotamus"  "time ...."
+grepl(pattern, string) # Logical: TRUE FALSE  TRUE
+grep("o", string, value=TRUE)  # everywhere
+grep("om", string, value=TRUE) # once
+grep("o[mt]", string, value=TRUE) # 2 x
+
+## Find location and length of match
+regexpr(pattern, string) # First match in each word
+gregexpr(pattern, string) # and all matches in each word
+
+## Extract substring
+substr(string, 13,15) # Applies substr to each string in vector
+
+## Extract provided pattern from all strings
+regmatches(string,  regexpr(pattern, string)) # only first occurance
+regmatches(string, gregexpr(pattern, string)) # all occurances
+
+## Replace patterns
+replacement <- "_A_"
+sub(pattern, replacement, string)
+gsub(pattern, replacement, string)
+
+### more interesting : use the matched part {'\1' is the first parenthesized part : (*)}
+gsub("(t.m)", "{\\1}", string)
+gsub("(t.m)", "{\\U\\1}", string, perl=TRUE)
+
+## Split string at pattern (carve out pattern and split around it)
+strsplit(string, pattern)
 
 
 
@@ -328,6 +384,12 @@ class(testArray) <- c("LargeArray")
 ## found outside (lists all the external dependencies of a function)
 f <- function() x + 1
 codetools::findGlobals(f)
+
+## Different types of for loops over vectors
+## 1. loop over the elements: `for (x in xs)`
+## 2. loop over the numeric indices: `for (i in seq_along(xs))`
+## 3. loop over the names: `for (nm in names(xs))`
+
 
 ## Send list of arguments to function:
 args <- list(1:10, na.rm = TRUE)
